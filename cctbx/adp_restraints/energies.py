@@ -4,21 +4,45 @@ from cctbx.array_family import flex
 from libtbx import adopt_init_args
 import math
 import sys
+from typing import Optional, List, Tuple, Any, Union, TextIO
 
 class energies(object):
+  """
+  Class to compute and manage ADP restraint energies.
+  
+  This class handles the calculation of various ADP restraint energies
+  including ADP similarity, rigid bond, and isotropic ADP restraints.
+  """
 
-  def __init__(self, u_cart,
-                     u_iso=None,
-                     use_u_aniso=None,
-                     sites_cart=None,
-                     adp_similarity_proxies=None,
-                     rigid_bond_proxies=None,
-                     isotropic_adp_proxies=None,
-                     compute_gradients=True,
-                     gradients_aniso_cart=None,
-                     gradients_iso=None,
-                     disable_asu_cache=False,
-                     normalization=False):
+  def __init__(self, u_cart: flex.sym_mat3_double,
+                     u_iso: Optional[flex.double] = None,
+                     use_u_aniso: Optional[flex.bool] = None,
+                     sites_cart: Optional[flex.vec3_double] = None,
+                     adp_similarity_proxies: Optional[Any] = None,
+                     rigid_bond_proxies: Optional[Any] = None,
+                     isotropic_adp_proxies: Optional[Any] = None,
+                     compute_gradients: bool = True,
+                     gradients_aniso_cart: Optional[flex.sym_mat3_double] = None,
+                     gradients_iso: Optional[flex.double] = None,
+                     disable_asu_cache: bool = False,
+                     normalization: bool = False) -> None:
+    """
+    Initialize energies calculation for ADP restraints.
+    
+    Args:
+        u_cart (flex.sym_mat3_double): Anisotropic displacement parameters in Cartesian coordinates.
+        u_iso (Optional[flex.double]): Isotropic displacement parameters. Defaults to None.
+        use_u_aniso (Optional[flex.bool]): Boolean array indicating which atoms use anisotropic ADP. Defaults to None.
+        sites_cart (Optional[flex.vec3_double]): Atomic positions in Cartesian coordinates. Defaults to None.
+        adp_similarity_proxies (Optional[Any]): Proxies for ADP similarity restraints. Defaults to None.
+        rigid_bond_proxies (Optional[Any]): Proxies for rigid bond restraints. Defaults to None.
+        isotropic_adp_proxies (Optional[Any]): Proxies for isotropic ADP restraints. Defaults to None.
+        compute_gradients (bool): Whether to compute gradients. Defaults to True.
+        gradients_aniso_cart (Optional[flex.sym_mat3_double]): Pre-allocated gradient array for anisotropic ADP. Defaults to None.
+        gradients_iso (Optional[flex.double]): Pre-allocated gradient array for isotropic ADP. Defaults to None.
+        disable_asu_cache (bool): Whether to disable ASU cache. Defaults to False.
+        normalization (bool): Whether to apply normalization. Defaults to False.
+    """
     adopt_init_args(self, locals())
     self.number_of_restraints = 0
     self.residual_sum = 0
@@ -78,7 +102,14 @@ class energies(object):
       self.residual_sum += self.isotropic_adp_residual_sum
     self.finalize_target_and_gradients()
 
-  def adp_similarity_deviation(self):
+  def adp_similarity_deviation(self) -> Optional[Tuple[float, float, float]]:
+    """
+    Calculate ADP similarity deviation statistics.
+    
+    Returns:
+        Optional[Tuple[float, float, float]]: Tuple of (min, max, average) deviations,
+            or None if no ADP similarity proxies are available.
+    """
     if (self.n_adp_similarity_proxies is not None):
       adp_similarity_deltas_rms = adp_restraints.adp_similarity_deltas_rms(
         u_cart=self.u_cart,
@@ -90,8 +121,16 @@ class energies(object):
       a_max = math.sqrt(flex.max_default(a_sq, 0))
       a_min = math.sqrt(flex.min_default(a_sq, 0))
       return a_min, a_max, a_ave
+    return None
 
-  def rigid_bond_deviation(self):
+  def rigid_bond_deviation(self) -> Optional[Tuple[float, float, float]]:
+    """
+    Calculate rigid bond deviation statistics.
+    
+    Returns:
+        Optional[Tuple[float, float, float]]: Tuple of (min, max, average) deviations,
+            or None if no rigid bond proxies are available.
+    """
     if (self.n_rigid_bond_proxies is not None):
       rigid_bond_deltas = adp_restraints.rigid_bond_deltas(
         sites_cart=self.sites_cart,
@@ -102,8 +141,16 @@ class energies(object):
       r_max = math.sqrt(flex.max_default(r_sq, 0))
       r_min = math.sqrt(flex.min_default(r_sq, 0))
       return r_min, r_max, r_ave
+    return None
 
-  def isotropic_adp_deviation(self):
+  def isotropic_adp_deviation(self) -> Optional[Tuple[float, float, float]]:
+    """
+    Calculate isotropic ADP deviation statistics.
+    
+    Returns:
+        Optional[Tuple[float, float, float]]: Tuple of (min, max, average) deviations,
+            or None if no isotropic ADP proxies are available.
+    """
     if (self.n_isotropic_adp_proxies is not None):
       isotropic_adp_deltas_rms = adp_restraints.isotropic_adp_deltas_rms(
         u_cart=self.u_cart,
@@ -113,8 +160,16 @@ class energies(object):
       i_max = math.sqrt(flex.max_default(i_sq, 0))
       i_min = math.sqrt(flex.min_default(i_sq, 0))
       return i_min, i_max, i_ave
+    return None
 
-  def show(self, f=None, prefix=""):
+  def show(self, f: Optional[TextIO] = None, prefix: str = "") -> None:
+    """
+    Display energy statistics.
+    
+    Args:
+        f (Optional[TextIO]): Output file stream. If None, uses sys.stdout.
+        prefix (str): Prefix string for output lines. Defaults to "".
+    """
     if (f is None): f = sys.stdout
     print(prefix+"target: %.6g" % self.target, file=f)
     if (self.n_adp_similarity_proxies is not None):
@@ -127,7 +182,10 @@ class energies(object):
       print(prefix+"  isotropic_adp_residual_sum (n=%d): %.6g" % (
         self.n_isotropic_adp_proxies, self.isotropic_adp_residual_sum), file=f)
 
-  def finalize_target_and_gradients(self):
+  def finalize_target_and_gradients(self) -> None:
+    """
+    Finalize the target value and apply normalization to gradients if needed.
+    """
     self.target = self.residual_sum
     if (self.normalization):
       self.normalization_factor = 1.0 / max(1, self.number_of_restraints)

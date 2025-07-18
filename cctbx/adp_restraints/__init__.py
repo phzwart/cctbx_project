@@ -12,20 +12,42 @@ import scitbx.restraints
 
 from cctbx.geometry_restraints import weight_as_sigma
 import sys
+from typing import Optional, List, Tuple, Any, Union, TextIO, Dict
 
 class energies_iso(scitbx.restraints.energies):
+  """
+  Class for computing isotropic ADP restraint energies.
+  
+  This class handles the calculation of isotropic ADP restraint energies
+  for crystallographic refinement.
+  """
 
   def __init__(self,
-        plain_pair_sym_table,
-        xray_structure,
-        parameters,
-        use_u_local_only,
-        use_hd,
-        wilson_b=None,
-        compute_gradients=True,
-        gradients=None,
-        normalization=False,
-        collect=False):
+        plain_pair_sym_table: Any,
+        xray_structure: Any,
+        parameters: Any,
+        use_u_local_only: bool,
+        use_hd: bool,
+        wilson_b: Optional[float] = None,
+        compute_gradients: bool = True,
+        gradients: Optional[flex.double] = None,
+        normalization: bool = False,
+        collect: bool = False) -> None:
+    """
+    Initialize isotropic ADP restraint energies.
+    
+    Args:
+        plain_pair_sym_table (Any): Pair symmetry table for restraints.
+        xray_structure (Any): X-ray structure object.
+        parameters (Any): Restraint parameters.
+        use_u_local_only (bool): Whether to use only local U values.
+        use_hd (bool): Whether to include hydrogen/deuterium atoms.
+        wilson_b (Optional[float]): Wilson B parameter. Defaults to None.
+        compute_gradients (bool): Whether to compute gradients. Defaults to True.
+        gradients (Optional[flex.double]): Pre-allocated gradient array. Defaults to None.
+        normalization (bool): Whether to apply normalization. Defaults to False.
+        collect (bool): Whether to collect additional data. Defaults to False.
+    """
     scitbx.restraints.energies.__init__(self,
       compute_gradients=compute_gradients,
       gradients=gradients,
@@ -92,8 +114,27 @@ class energies_iso(scitbx.restraints.energies):
     self.finalize_target_and_gradients()
 
 class adp_aniso_restraints(object):
-  def __init__(self, xray_structure, restraints_manager, use_hd,
-               selection = None):
+  """
+  Class for handling anisotropic ADP restraints.
+  
+  This class manages pairwise ADP restraints with support for three mix cases:
+  - () - ()  (both isotropic)
+  - o - ()   (anisotropic to isotropic)
+  - o - o    (both anisotropic)
+  In SHELX this is called SIMU restraints.
+  """
+  
+  def __init__(self, xray_structure: Any, restraints_manager: Any, use_hd: bool,
+               selection: Optional[flex.bool] = None) -> None:
+    """
+    Initialize anisotropic ADP restraints.
+    
+    Args:
+        xray_structure (Any): X-ray structure object.
+        restraints_manager (Any): Manager for restraints.
+        use_hd (bool): Whether to include hydrogen/deuterium atoms.
+        selection (Optional[flex.bool]): Atom selection. Defaults to None.
+    """
     # Pairwise ADP restraints: 3 mix cases supported:
     #  o - ()
     #  o - o
@@ -134,7 +175,14 @@ class adp_aniso_restraints(object):
 @bp.inject_into(adp_similarity)
 class _():
 
-  def _show_sorted_item(self, f, prefix):
+  def _show_sorted_item(self, f: TextIO, prefix: str) -> None:
+    """
+    Display sorted ADP similarity item information.
+    
+    Args:
+        f (TextIO): Output file stream.
+        prefix (str): Prefix string for output lines.
+    """
     adp_labels = ("U11","U22","U33","U12","U13","U23")
     deltas = self.deltas()
     if self.use_u_aniso == (False, False):
@@ -158,21 +206,52 @@ class _():
 @bp.inject_into(shared_adp_similarity_proxy)
 class _():
 
-  def deltas_rms(self, params):
+  def deltas_rms(self, params: Any) -> Any:
+    """
+    Calculate RMS deltas for ADP similarity restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+        
+    Returns:
+        Any: RMS deltas values.
+    """
     return adp_similarity_deltas_rms(params=params, proxies=self)
 
-  def residuals(self, params):
+  def residuals(self, params: Any) -> Any:
+    """
+    Calculate residuals for ADP similarity restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+        
+    Returns:
+        Any: Residual values.
+    """
     return adp_similarity_residuals(params=params, proxies=self)
 
   def show_sorted(self,
-        by_value,
-        u_cart,
-        u_iso,
-        use_u_aniso,
-        site_labels=None,
-        f=None,
-        prefix="",
-        max_items=None):
+        by_value: str,
+        u_cart: flex.sym_mat3_double,
+        u_iso: flex.double,
+        use_u_aniso: flex.bool,
+        site_labels: Optional[List[str]] = None,
+        f: Optional[TextIO] = None,
+        prefix: str = "",
+        max_items: Optional[int] = None) -> None:
+    """
+    Display sorted ADP similarity restraints.
+    
+    Args:
+        by_value (str): Sorting criterion ("residual", "rms_deltas", "delta").
+        u_cart (flex.sym_mat3_double): Anisotropic displacement parameters.
+        u_iso (flex.double): Isotropic displacement parameters.
+        use_u_aniso (flex.bool): Boolean array for anisotropic ADP usage.
+        site_labels (Optional[List[str]]): Labels for atomic sites. Defaults to None.
+        f (Optional[TextIO]): Output file stream. Defaults to None.
+        prefix (str): Prefix string for output lines. Defaults to "".
+        max_items (Optional[int]): Maximum number of items to show. Defaults to None.
+    """
     _show_sorted_impl(self=self,
         proxy_type=adp_similarity,
         proxy_label="ADP similarity",
@@ -185,7 +264,14 @@ class _():
 @bp.inject_into(adp_u_eq_similarity)
 class _():
 
-  def _show_sorted_item(self, f, prefix):
+  def _show_sorted_item(self, f: TextIO, prefix: str) -> None:
+    """
+    Display sorted ADP Ueq similarity item information.
+    
+    Args:
+        f (TextIO): Output file stream.
+        prefix (str): Prefix string for output lines.
+    """
     print("%s Mean Ueq=%6.2e" %(prefix, self.mean_u_eq), file=f)
     print("%s weight=%6.2e sigma=%6.2e rms_deltas=%6.2e residual=%6.2e"\
       %(prefix, self.weight, weight_as_sigma(weight=self.weight),
@@ -194,21 +280,52 @@ class _():
 @bp.inject_into(shared_adp_u_eq_similarity_proxy)
 class _():
 
-  def deltas_rms(self, params):
+  def deltas_rms(self, params: Any) -> Any:
+    """
+    Calculate RMS deltas for ADP Ueq similarity restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+        
+    Returns:
+        Any: RMS deltas values.
+    """
     return adp_u_eq_similarity_deltas_rms(params=params, proxies=self)
 
-  def residuals(self, params):
+  def residuals(self, params: Any) -> Any:
+    """
+    Calculate residuals for ADP Ueq similarity restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+        
+    Returns:
+        Any: Residual values.
+    """
     return adp_u_eq_similarity_residuals(params=params, proxies=self)
 
   def show_sorted(self,
-        by_value,
-        u_cart,
-        u_iso,
-        use_u_aniso,
-        site_labels=None,
-        f=None,
-        prefix="",
-        max_items=None):
+        by_value: str,
+        u_cart: flex.sym_mat3_double,
+        u_iso: flex.double,
+        use_u_aniso: flex.bool,
+        site_labels: Optional[List[str]] = None,
+        f: Optional[TextIO] = None,
+        prefix: str = "",
+        max_items: Optional[int] = None) -> None:
+    """
+    Display sorted ADP Ueq similarity restraints.
+    
+    Args:
+        by_value (str): Sorting criterion ("residual", "rms_deltas", "delta").
+        u_cart (flex.sym_mat3_double): Anisotropic displacement parameters.
+        u_iso (flex.double): Isotropic displacement parameters.
+        use_u_aniso (flex.bool): Boolean array for anisotropic ADP usage.
+        site_labels (Optional[List[str]]): Labels for atomic sites. Defaults to None.
+        f (Optional[TextIO]): Output file stream. Defaults to None.
+        prefix (str): Prefix string for output lines. Defaults to "".
+        max_items (Optional[int]): Maximum number of items to show. Defaults to None.
+    """
     _show_sorted_impl(self=self,
         proxy_type=adp_u_eq_similarity,
         proxy_label="Ueq similarity",
@@ -221,7 +338,14 @@ class _():
 @bp.inject_into(adp_volume_similarity)
 class _():
 
-  def _show_sorted_item(self, f, prefix):
+  def _show_sorted_item(self, f: TextIO, prefix: str) -> None:
+    """
+    Display sorted ADP volume similarity item information.
+    
+    Args:
+        f (TextIO): Output file stream.
+        prefix (str): Prefix string for output lines.
+    """
     print("%s Mean Volume=%6.2e" %(prefix, self.mean_u_volume), file=f)
     print("%s weight=%6.2e sigma=%6.2e rms_deltas=%6.2e residual=%6.2e"\
       %(prefix, self.weight, weight_as_sigma(weight=self.weight),
@@ -230,21 +354,52 @@ class _():
 @bp.inject_into(shared_adp_volume_similarity_proxy)
 class _():
 
-  def deltas_rms(self, params):
+  def deltas_rms(self, params: Any) -> Any:
+    """
+    Calculate RMS deltas for ADP volume similarity restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+        
+    Returns:
+        Any: RMS deltas values.
+    """
     return adp_volume_similarity_deltas_rms(params=params, proxies=self)
 
-  def residuals(self, params):
+  def residuals(self, params: Any) -> Any:
+    """
+    Calculate residuals for ADP volume similarity restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+        
+    Returns:
+        Any: Residual values.
+    """
     return adp_volume_similarity_residuals(params=params, proxies=self)
 
   def show_sorted(self,
-        by_value,
-        u_cart,
-        u_iso,
-        use_u_aniso,
-        site_labels=None,
-        f=None,
-        prefix="",
-        max_items=None):
+        by_value: str,
+        u_cart: flex.sym_mat3_double,
+        u_iso: flex.double,
+        use_u_aniso: flex.bool,
+        site_labels: Optional[List[str]] = None,
+        f: Optional[TextIO] = None,
+        prefix: str = "",
+        max_items: Optional[int] = None) -> None:
+    """
+    Display sorted ADP volume similarity restraints.
+    
+    Args:
+        by_value (str): Sorting criterion ("residual", "rms_deltas", "delta").
+        u_cart (flex.sym_mat3_double): Anisotropic displacement parameters.
+        u_iso (flex.double): Isotropic displacement parameters.
+        use_u_aniso (flex.bool): Boolean array for anisotropic ADP usage.
+        site_labels (Optional[List[str]]): Labels for atomic sites. Defaults to None.
+        f (Optional[TextIO]): Output file stream. Defaults to None.
+        prefix (str): Prefix string for output lines. Defaults to "".
+        max_items (Optional[int]): Maximum number of items to show. Defaults to None.
+    """
     _show_sorted_impl(self=self,
         proxy_type=adp_volume_similarity,
         proxy_label="ADP volume similarity",
@@ -257,7 +412,14 @@ class _():
 @bp.inject_into(isotropic_adp)
 class _():
 
-  def _show_sorted_item(self, f, prefix):
+  def _show_sorted_item(self, f: TextIO, prefix: str) -> None:
+    """
+    Display sorted isotropic ADP item information.
+    
+    Args:
+        f (TextIO): Output file stream.
+        prefix (str): Prefix string for output lines.
+    """
     adp_labels = ("U11","U22","U33","U12","U13","U23")
     print("%s         delta    sigma   weight rms_deltas residual" % (prefix), file=f)
     rdr = None
@@ -272,21 +434,52 @@ class _():
 @bp.inject_into(shared_isotropic_adp_proxy)
 class _():
 
-  def deltas_rms(self, params):
+  def deltas_rms(self, params: Any) -> Any:
+    """
+    Calculate RMS deltas for isotropic ADP restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+        
+    Returns:
+        Any: RMS deltas values.
+    """
     return isotropic_adp_deltas_rms(params=params, proxies=self)
 
-  def residuals(self, params):
+  def residuals(self, params: Any) -> Any:
+    """
+    Calculate residuals for isotropic ADP restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+        
+    Returns:
+        Any: Residual values.
+    """
     return isotropic_adp_residuals(params=params, proxies=self)
 
   def show_sorted(self,
-        by_value,
-        u_cart,
-        u_iso,
-        use_u_aniso,
-        site_labels=None,
-        f=None,
-        prefix="",
-        max_items=None):
+        by_value: str,
+        u_cart: flex.sym_mat3_double,
+        u_iso: flex.double,
+        use_u_aniso: flex.bool,
+        site_labels: Optional[List[str]] = None,
+        f: Optional[TextIO] = None,
+        prefix: str = "",
+        max_items: Optional[int] = None) -> None:
+    """
+    Display sorted isotropic ADP restraints.
+    
+    Args:
+        by_value (str): Sorting criterion ("residual", "rms_deltas", "delta").
+        u_cart (flex.sym_mat3_double): Anisotropic displacement parameters.
+        u_iso (flex.double): Isotropic displacement parameters.
+        use_u_aniso (flex.bool): Boolean array for anisotropic ADP usage.
+        site_labels (Optional[List[str]]): Labels for atomic sites. Defaults to None.
+        f (Optional[TextIO]): Output file stream. Defaults to None.
+        prefix (str): Prefix string for output lines. Defaults to "".
+        max_items (Optional[int]): Maximum number of items to show. Defaults to None.
+    """
     _show_sorted_impl(self=self,
         proxy_type=isotropic_adp,
         proxy_label="Isotropic ADP",
@@ -300,7 +493,14 @@ class _():
 @bp.inject_into(fixed_u_eq_adp)
 class _():
 
-  def _show_sorted_item(self, f, prefix):
+  def _show_sorted_item(self, f: TextIO, prefix: str) -> None:
+    """
+    Display sorted fixed Ueq ADP item information.
+    
+    Args:
+        f (TextIO): Output file stream.
+        prefix (str): Prefix string for output lines.
+    """
     adp_label = "Ueq"
     print("%s          delta    sigma   weight" %(prefix), end=' ', file=f)
     print("residual", file=f)
@@ -312,21 +512,52 @@ class _():
 @bp.inject_into(shared_fixed_u_eq_adp_proxy)
 class _():
 
-  def deltas_rms(self, params):
+  def deltas_rms(self, params: Any) -> Any:
+    """
+    Calculate RMS deltas for fixed Ueq ADP restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+        
+    Returns:
+        Any: RMS deltas values.
+    """
     return fixed_u_eq_adp_deltas_rms(params=params, proxies=self)
 
-  def residuals(self, params):
+  def residuals(self, params: Any) -> Any:
+    """
+    Calculate residuals for fixed Ueq ADP restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+        
+    Returns:
+        Any: Residual values.
+    """
     return fixed_u_eq_adp_residuals(params=params, proxies=self)
 
   def show_sorted(self,
-        by_value,
-        u_cart,
-        u_iso,
-        use_u_aniso,
-        site_labels=None,
-        f=None,
-        prefix="",
-        max_items=None):
+        by_value: str,
+        u_cart: flex.sym_mat3_double,
+        u_iso: flex.double,
+        use_u_aniso: flex.bool,
+        site_labels: Optional[List[str]] = None,
+        f: Optional[TextIO] = None,
+        prefix: str = "",
+        max_items: Optional[int] = None) -> None:
+    """
+    Display sorted fixed Ueq ADP restraints.
+    
+    Args:
+        by_value (str): Sorting criterion ("residual", "rms_deltas", "delta").
+        u_cart (flex.sym_mat3_double): Anisotropic displacement parameters.
+        u_iso (flex.double): Isotropic displacement parameters.
+        use_u_aniso (flex.bool): Boolean array for anisotropic ADP usage.
+        site_labels (Optional[List[str]]): Labels for atomic sites. Defaults to None.
+        f (Optional[TextIO]): Output file stream. Defaults to None.
+        prefix (str): Prefix string for output lines. Defaults to "".
+        max_items (Optional[int]): Maximum number of items to show. Defaults to None.
+    """
     _show_sorted_impl(self=self,
         proxy_type=fixed_u_eq_adp,
         proxy_label="Fixed Ueq ADP",
@@ -340,7 +571,14 @@ class _():
 @bp.inject_into(rigid_bond)
 class _():
 
-  def _show_sorted_item(self, f, prefix):
+  def _show_sorted_item(self, f: TextIO, prefix: str) -> None:
+    """
+    Display sorted rigid bond item information.
+    
+    Args:
+        f (TextIO): Output file stream.
+        prefix (str): Prefix string for output lines.
+    """
     print("%s   delta_z    sigma   weight residual" % (prefix), file=f)
     print("%s %9.2e %6.2e %6.2e %6.2e" % (
       prefix, self.delta_z(), weight_as_sigma(weight=self.weight),
@@ -349,20 +587,48 @@ class _():
 @bp.inject_into(shared_rigid_bond_proxy)
 class _():
 
-  def deltas(self, params):
+  def deltas(self, params: Any) -> Any:
+    """
+    Calculate deltas for rigid bond restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+    Returns:
+        Any: Deltas values.
+    """
     return rigid_bond_deltas(params=params, proxies=self)
 
-  def residuals(self, params):
+  def residuals(self, params: Any) -> Any:
+    """
+    Calculate residuals for rigid bond restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+    Returns:
+        Any: Residual values.
+    """
     return rigid_bond_residuals(params=params, proxies=self)
 
   def show_sorted(self,
-        by_value,
-        sites_cart,
-        u_cart,
-        site_labels=None,
-        f=None,
-        prefix="",
-        max_items=None):
+        by_value: str,
+        sites_cart: flex.vec3_double,
+        u_cart: flex.sym_mat3_double,
+        site_labels: Optional[List[str]] = None,
+        f: Optional[TextIO] = None,
+        prefix: str = "",
+        max_items: Optional[int] = None) -> None:
+    """
+    Display sorted rigid bond restraints.
+    
+    Args:
+        by_value (str): Sorting criterion ("residual", "rms_deltas", "delta").
+        sites_cart (flex.vec3_double): Atomic positions in Cartesian coordinates.
+        u_cart (flex.sym_mat3_double): Anisotropic displacement parameters.
+        site_labels (Optional[List[str]]): Labels for atomic sites. Defaults to None.
+        f (Optional[TextIO]): Output file stream. Defaults to None.
+        prefix (str): Prefix string for output lines. Defaults to "".
+        max_items (Optional[int]): Maximum number of items to show. Defaults to None.
+    """
     _show_sorted_impl(self=self,
         proxy_type=rigid_bond,
         proxy_label="Rigid bond",
@@ -375,7 +641,14 @@ class _():
 @bp.inject_into(rigu)
 class _():
 
-  def _show_sorted_item(self, f, prefix):
+  def _show_sorted_item(self, f: TextIO, prefix: str) -> None:
+    """
+    Display sorted RIGU restraint item information.
+    
+    Args:
+        f (TextIO): Output file stream.
+        prefix (str): Prefix string for output lines.
+    """
     print("%s   delta_z    sigma   weight residual" % (prefix), file=f)
     print("%s %9.2e %6.2e %6.2e %6.2e" % (
       prefix, self.delta_33(), weight_as_sigma(weight=self.weight),
@@ -390,20 +663,48 @@ class _():
 @bp.inject_into(shared_rigu_proxy)
 class _():
 
-  def deltas(self, params):
+  def deltas(self, params: Any) -> Any:
+    """
+    Calculate deltas for RIGU restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+    Returns:
+        Any: Deltas values.
+    """
     return rigu_deltas(params=params, proxies=self)
 
-  def residuals(self, params):
+  def residuals(self, params: Any) -> Any:
+    """
+    Calculate residuals for RIGU restraints.
+    
+    Args:
+        params (Any): Restraint parameters.
+    Returns:
+        Any: Residual values.
+    """
     return rigu_residuals(params=params, proxies=self)
 
   def show_sorted(self,
-        by_value,
-        sites_cart,
-        u_cart,
-        site_labels=None,
-        f=None,
-        prefix="",
-        max_items=None):
+        by_value: str,
+        sites_cart: flex.vec3_double,
+        u_cart: flex.sym_mat3_double,
+        site_labels: Optional[List[str]] = None,
+        f: Optional[TextIO] = None,
+        prefix: str = "",
+        max_items: Optional[int] = None) -> None:
+    """
+    Display sorted RIGU restraints.
+    
+    Args:
+        by_value (str): Sorting criterion ("residual", "rms_deltas", "delta").
+        sites_cart (flex.vec3_double): Atomic positions in Cartesian coordinates.
+        u_cart (flex.sym_mat3_double): Anisotropic displacement parameters.
+        site_labels (Optional[List[str]]): Labels for atomic sites. Defaults to None.
+        f (Optional[TextIO]): Output file stream. Defaults to None.
+        prefix (str): Prefix string for output lines. Defaults to "".
+        max_items (Optional[int]): Maximum number of items to show. Defaults to None.
+    """
     _show_sorted_impl(self=self,
         proxy_type=rigu,
         proxy_label="Rigu bond",
@@ -414,18 +715,36 @@ class _():
         max_items=max_items)
 
 def _show_sorted_impl(self,
-      proxy_type,
-      proxy_label,
-      item_label,
-      by_value,
-      u_cart,
-      u_iso=None,
-      use_u_aniso=None,
-      sites_cart=None,
-      site_labels=None,
-      f=None,
-      prefix="",
-      max_items=None):
+      proxy_type: Any,
+      proxy_label: str,
+      item_label: str,
+      by_value: str,
+      u_cart: flex.sym_mat3_double,
+      u_iso: Optional[flex.double] = None,
+      use_u_aniso: Optional[flex.bool] = None,
+      sites_cart: Optional[flex.vec3_double] = None,
+      site_labels: Optional[List[str]] = None,
+      f: Optional[TextIO] = None,
+      prefix: str = "",
+      max_items: Optional[int] = None) -> None:
+  """
+  Display sorted restraint proxies with detailed information.
+
+  Args:
+      self: Proxy collection.
+      proxy_type (Any): Type of proxy/restraint.
+      proxy_label (str): Label for the proxy type.
+      item_label (str): Label for the items.
+      by_value (str): Sorting criterion ("residual", "rms_deltas", "delta").
+      u_cart (flex.sym_mat3_double): Anisotropic displacement parameters.
+      u_iso (Optional[flex.double]): Isotropic displacement parameters.
+      use_u_aniso (Optional[flex.bool]): Boolean array for anisotropic ADP usage.
+      sites_cart (Optional[flex.vec3_double]): Atomic positions in Cartesian coordinates.
+      site_labels (Optional[List[str]]): Labels for atomic sites.
+      f (Optional[TextIO]): Output file stream. Defaults to sys.stdout.
+      prefix (str): Prefix string for output lines.
+      max_items (Optional[int]): Maximum number of items to show.
+  """
   assert by_value in ["residual", "rms_deltas", "delta"]
   assert site_labels is None or len(site_labels) == u_cart.size()
   assert sites_cart is None or len(sites_cart) == u_cart.size()
