@@ -50,11 +50,13 @@ Output: Transformed ADPs + Debye-Waller factors + validation results
 **Main Modules**:
 - **`cctbx/adptbx.py`**: Primary interface importing `cctbx_adptbx_ext`
   - Imports core ADP transformation and calculation functions
-  - Provides additional Python utility functions
-  - Exposes C++ functions as Python functions
+  - Provides additional Python utility functions with comprehensive type hints
+  - Exposes C++ functions as Python functions with full documentation
+  - Includes 6 utility functions with Google/NumPy style docstrings
 - **`cctbx/anharmonic.py`**: Anharmonic ADP functions importing `cctbx_anharmonic_ext`
   - Imports anharmonic ADP calculation functions
   - Provides Gram-Charlier expansion calculations
+  - Enhanced with typing imports for consistency
 
 **Import Pattern**:
 ```python
@@ -114,15 +116,21 @@ from cctbx_adptbx_ext import *
 **Dependencies**: `scitbx.matrix`, `cctbx.sgtbx` for symmetry operations
 
 ### Additional Python Utility Functions
-**Purpose**: Provide Python-specific utilities and convenience functions.
+**Purpose**: Provide Python-specific utilities and convenience functions with comprehensive type hints and documentation.
 
 **Key Functions** (from `cctbx/adptbx.py`):
-- `random_rotate_ellipsoid(u_cart, r_min, r_max)`: Randomly rotate ADP ellipsoid
-- `random_u_cart(u_scale, u_min)`: Generate random U_cart parameters
-- `debye_waller_factor_u_star_gradients(h, u_star)`: Calculate Debye-Waller gradients
-- `debye_waller_factor_u_star_curvatures(h, u_star)`: Calculate Debye-Waller curvatures
-- `random_traceless_symmetry_constrained_b_cart(crystal_symmetry, u_scale, u_min)`: Generate symmetry-constrained B_cart
-- `intersection(u_1, u_2, site_1, site_2, unit_cell)`: Calculate scatterer intersection
+- `random_rotate_ellipsoid(u_cart: List[float], r_min: float = 0, r_max: float = 360) -> List[float]`: Randomly rotate ADP ellipsoid
+- `random_u_cart(u_scale: float = 1, u_min: float = 0) -> List[float]`: Generate random U_cart parameters
+- `debye_waller_factor_u_star_gradients(h: Any, u_star: List[float]) -> flex.double`: Calculate Debye-Waller gradients
+- `debye_waller_factor_u_star_curvatures(h: Any, u_star: List[float]) -> flex.double`: Calculate Debye-Waller curvatures
+- `random_traceless_symmetry_constrained_b_cart(crystal_symmetry: Any, u_scale: float = 1, u_min: float = 0.1) -> List[float]`: Generate symmetry-constrained B_cart
+- `intersection(u_1: Union[float, List[float]], u_2: Union[float, List[float]], site_1: Tuple[float, float, float], site_2: Tuple[float, float, float], unit_cell: Any) -> float`: Calculate scatterer intersection
+
+**Features**:
+- **Comprehensive Type Hints**: All functions have precise parameter and return type annotations
+- **Google/NumPy Style Docstrings**: Detailed documentation with Args, Returns sections
+- **IDE Support**: Enhanced autocomplete and error detection
+- **RAG Compatibility**: Rich context for AI-powered code generation
 
 ## Usage Examples
 
@@ -558,10 +566,12 @@ C++ classes: gram_charlier (Gram-Charlier expansion)
 ## Changelog/Version Notes
 
 ### Recent Enhancements
-- **Type Hints**: Added comprehensive type annotations to test files
-- **Documentation**: Enhanced docstrings with Google/NumPy style
+- **Type Hints**: Added comprehensive type annotations to test files and Python interface modules
+- **Documentation**: Enhanced docstrings with Google/NumPy style for all utility functions
 - **Validation**: Improved physical constraint checking
 - **Performance**: Optimized coordinate transformation algorithms
+- **IDE Support**: Enhanced autocomplete and error detection with precise type hints
+- **RAG Compatibility**: Rich documentation for AI-powered code generation
 
 ### Compatibility
 - **Python 2/3**: Maintains compatibility with both Python versions
@@ -575,4 +585,6 @@ C++ classes: gram_charlier (Gram-Charlier expansion)
 - **Machine Learning**: Integration with ML-based ADP prediction
 - **Real-time Validation**: Continuous physical constraint checking during refinement
 - **Enhanced C++ Extensions**: Additional high-performance computational kernels
-- **Improved Python Interface**: More comprehensive Python utility functions 
+- **Improved Python Interface**: More comprehensive Python utility functions
+- **Type Safety**: Further enhancement of type hints and validation
+- **Documentation**: Continued improvement of docstrings and examples 
