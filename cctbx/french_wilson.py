@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, print_function
+from typing import Dict, Optional, Any, Union, List, Tuple
 import sys, math
 from libtbx.str_utils import make_sub_header
 from libtbx.utils import Sorry
@@ -90,392 +91,503 @@ master_phil = libtbx.phil.parse("""
 """)
 
 def fw_acentric(
-      I,
-      sigma_I,
-      mean_intensity,
-      sigma_iobs_rejection_criterion):
-  assert (mean_intensity != 0) and (sigma_I != 0)
-  h = (I/sigma_I) - (sigma_I/mean_intensity)
-  h_min = sigma_iobs_rejection_criterion
-  i_sig_min = h_min+0.3
-  if (I/sigma_I) < i_sig_min or h < h_min:
-    return -1.0, -1.0, -1.0, -1.0
-  else:
-    if h < 3.0:
-      point = 10.0*(h+4.0)
-      pt_1 = int(point)
-      pt_2 = pt_1 + 1
-      delta = point - pt_1
-      J = interpolate(pt_1=ac_zj[pt_1],
-                      pt_2=ac_zj[pt_2],
-                      delta=delta) * sigma_I
-      sigma_J = interpolate(pt_1=ac_zj_sd[pt_1],
-                            pt_2=ac_zj_sd[pt_2],
-                            delta=delta) * sigma_I
-      F = interpolate(pt_1=ac_zf[pt_1],
-                      pt_2=ac_zf[pt_2],
-                      delta=delta) * math.sqrt(sigma_I)
-      sigma_F = interpolate(pt_1=ac_zf_sd[pt_1],
-                            pt_2=ac_zf_sd[pt_2],
-                            delta=delta) * math.sqrt(sigma_I)
+      I: float,
+      sigma_I: float,
+      mean_intensity: float,
+      sigma_iobs_rejection_criterion: float) -> Tuple[float, float, float, float]:
+    """
+    French-Wilson scaling for acentric reflections.
+    
+    Args:
+        I: Observed intensity
+        sigma_I: Standard deviation of observed intensity
+        mean_intensity: Mean intensity for the resolution shell
+        sigma_iobs_rejection_criterion: Rejection criterion for I/sigma(I)
+    
+    Returns:
+        Tuple[float, float, float, float]: (J, sigma_J, F, sigma_F) where:
+            J: Corrected intensity
+            sigma_J: Standard deviation of corrected intensity
+            F: Corrected amplitude
+            sigma_F: Standard deviation of corrected amplitude
+    """
+    assert (mean_intensity != 0) and (sigma_I != 0)
+    h = (I/sigma_I) - (sigma_I/mean_intensity)
+    h_min = sigma_iobs_rejection_criterion
+    i_sig_min = h_min+0.3
+    if (I/sigma_I) < i_sig_min or h < h_min:
+      return -1.0, -1.0, -1.0, -1.0
     else:
-      J = h*sigma_I
-      sigma_J = sigma_I
-      F = math.sqrt(J)
-      sigma_F = 0.5*(sigma_I/F)
-    return J, sigma_J, F, sigma_F
+      if h < 3.0:
+        point = 10.0*(h+4.0)
+        pt_1 = int(point)
+        pt_2 = pt_1 + 1
+        delta = point - pt_1
+        J = interpolate(pt_1=ac_zj[pt_1],
+                        pt_2=ac_zj[pt_2],
+                        delta=delta) * sigma_I
+        sigma_J = interpolate(pt_1=ac_zj_sd[pt_1],
+                              pt_2=ac_zj_sd[pt_2],
+                              delta=delta) * sigma_I
+        F = interpolate(pt_1=ac_zf[pt_1],
+                        pt_2=ac_zf[pt_2],
+                        delta=delta) * math.sqrt(sigma_I)
+        sigma_F = interpolate(pt_1=ac_zf_sd[pt_1],
+                              pt_2=ac_zf_sd[pt_2],
+                              delta=delta) * math.sqrt(sigma_I)
+      else:
+        J = h*sigma_I
+        sigma_J = sigma_I
+        F = math.sqrt(J)
+        sigma_F = 0.5*(sigma_I/F)
+      return J, sigma_J, F, sigma_F
 
 def fw_centric(
-      I,
-      sigma_I,
-      mean_intensity,
-      sigma_iobs_rejection_criterion):
-  assert (mean_intensity != 0) and (sigma_I != 0)
-  h = (I/sigma_I) - ( sigma_I/(2.0*mean_intensity) )
-  h_min = sigma_iobs_rejection_criterion
-  i_sig_min = h_min+0.3
-  if (I/sigma_I) < i_sig_min or h < h_min:
-    return -1.0, -1.0, -1.0, -1.0
-  else:
-    if h < 4.0:
-      point = 10.0*(h+4.0)
-      pt_1 = int(point)
-      pt_2 = pt_1 + 1
-      delta = point - pt_1
-      J = interpolate(pt_1=c_zj[pt_1],
-                      pt_2=c_zj[pt_2],
-                      delta=delta) * sigma_I
-      sigma_J = interpolate(pt_1=c_zj_sd[pt_1],
-                            pt_2=c_zj_sd[pt_2],
-                            delta=delta) * sigma_I
-      F = interpolate(pt_1=c_zf[pt_1],
-                      pt_2=c_zf[pt_2],
-                      delta=delta) * math.sqrt(sigma_I)
-      sigma_F = interpolate(pt_1=c_zf_sd[pt_1],
-                            pt_2=c_zf_sd[pt_2],
-                            delta=delta) * math.sqrt(sigma_I)
+      I: float,
+      sigma_I: float,
+      mean_intensity: float,
+      sigma_iobs_rejection_criterion: float) -> Tuple[float, float, float, float]:
+    """
+    French-Wilson scaling for centric reflections.
+    
+    Args:
+        I: Observed intensity
+        sigma_I: Standard deviation of observed intensity
+        mean_intensity: Mean intensity for the resolution shell
+        sigma_iobs_rejection_criterion: Rejection criterion for I/sigma(I)
+    
+    Returns:
+        Tuple[float, float, float, float]: (J, sigma_J, F, sigma_F) where:
+            J: Corrected intensity
+            sigma_J: Standard deviation of corrected intensity
+            F: Corrected amplitude
+            sigma_F: Standard deviation of corrected amplitude
+    """
+    assert (mean_intensity != 0) and (sigma_I != 0)
+    h = (I/sigma_I) - ( sigma_I/(2.0*mean_intensity) )
+    h_min = sigma_iobs_rejection_criterion
+    i_sig_min = h_min+0.3
+    if (I/sigma_I) < i_sig_min or h < h_min:
+      return -1.0, -1.0, -1.0, -1.0
     else:
-      #adapted from French-Wilson w/ added x^6 term in the expansion
-      h_2 = 1.0 / (h*h)
-      h_4 = h_2 * h_2
-      h_6 = h_2 * h_4
-      #posterier of F
-      post_F = math.sqrt(h) * (1.0 - (3.0/8.0)*h_2 - (87.0/128.0)*h_4 - (2889.0/1024.0)*h_6)
-      #posterier of sigma_F
-      post_sig_F = math.sqrt( h * ((1.0/4.0)*h_2 + (15.0/32.0)*h_4 + (273.0/128.0)*h_6) )
-      J = h*sigma_I*(1.0 - (1.0/2.0)*h_2 - (3.0/4.0)*h_4 - 3.0*h_6)
-      sigma_J = 2.0*sigma_I*post_F*post_sig_F
-      F = post_F*math.sqrt(sigma_I)
-      sigma_F = post_sig_F*math.sqrt(sigma_I)
-  return J, sigma_J, F, sigma_F
+      if h < 4.0:
+        point = 10.0*(h+4.0)
+        pt_1 = int(point)
+        pt_2 = pt_1 + 1
+        delta = point - pt_1
+        J = interpolate(pt_1=c_zj[pt_1],
+                        pt_2=c_zj[pt_2],
+                        delta=delta) * sigma_I
+        sigma_J = interpolate(pt_1=c_zj_sd[pt_1],
+                              pt_2=c_zj_sd[pt_2],
+                              delta=delta) * sigma_I
+        F = interpolate(pt_1=c_zf[pt_1],
+                        pt_2=c_zf[pt_2],
+                        delta=delta) * math.sqrt(sigma_I)
+        sigma_F = interpolate(pt_1=c_zf_sd[pt_1],
+                              pt_2=c_zf_sd[pt_2],
+                              delta=delta) * math.sqrt(sigma_I)
+      else:
+        #adapted from French-Wilson w/ added x^6 term in the expansion
+        h_2 = 1.0 / (h*h)
+        h_4 = h_2 * h_2
+        h_6 = h_2 * h_4
+        #posterier of F
+        post_F = math.sqrt(h) * (1.0 - (3.0/8.0)*h_2 - (87.0/128.0)*h_4 - (2889.0/1024.0)*h_6)
+        #posterier of sigma_F
+        post_sig_F = math.sqrt( h * ((1.0/4.0)*h_2 + (15.0/32.0)*h_4 + (273.0/128.0)*h_6) )
+        J = h*sigma_I*(1.0 - (1.0/2.0)*h_2 - (3.0/4.0)*h_4 - 3.0*h_6)
+        sigma_J = 2.0*sigma_I*post_F*post_sig_F
+        F = post_F*math.sqrt(sigma_I)
+        sigma_F = post_sig_F*math.sqrt(sigma_I)
+    return J, sigma_J, F, sigma_F
 
-def get_mean_intensity(miller_array):
-  sum = 0.0
-  for d in miller_array.data():
-    sum += d
-  return (sum / len(miller_array.data()))
+def get_mean_intensity(miller_array: Any) -> float:
+    """
+    Calculate the mean intensity from a miller array.
+    
+    Args:
+        miller_array: Miller array containing intensity data
+    
+    Returns:
+        float: Mean intensity value
+    """
+    sum = 0.0
+    for d in miller_array.data():
+      sum += d
+    return (sum / len(miller_array.data()))
 
 # default number of bins is 60, but require that each bin has at least 40 reflections
 # if not try again with less bins until condition is satisfied
-def f_w_binning(miller_array, max_bins=60, min_bin_size=40, log=None):
-  if log == None:
-    log = sys.stdout
-  bin_success = False
-  while not bin_success:
-    miller_array.setup_binner(n_bins=max_bins)
-    bin_success = True
+def f_w_binning(miller_array: Any, max_bins: int = 60, min_bin_size: int = 40, log: Optional[Any] = None) -> bool:
+    """
+    Set up binning for French-Wilson scaling.
+    
+    Args:
+        miller_array: Miller array to bin
+        max_bins: Maximum number of resolution bins. Defaults to 60.
+        min_bin_size: Minimum number of reflections per bin. Defaults to 40.
+        log: Log file for output. Defaults to None (stdout).
+    
+    Returns:
+        bool: True if binning was successful
+    
+    Raises:
+        ValueError: If too few reflections for accurate binning
+    """
+    if log == None:
+      log = sys.stdout
+    bin_success = False
+    while not bin_success:
+      miller_array.setup_binner(n_bins=max_bins)
+      bin_success = True
+      for i_bin in miller_array.binner().range_all():
+        sel = miller_array.binner().selection(i_bin)
+        bin = miller_array.select(sel)
+        if bin.size() > 0:
+          if bin.size() < min_bin_size:
+            max_bins = max_bins - 1
+            if max_bins == 0:
+              raise ValueError("Too few reflections for accurate binning.")
+            print("bin too small, trying %d bins" % max_bins, file=log)
+            bin_success = False
+            break
+            #f_w_binning(miller_array, max_bins=new_max_bins, log=log)
+    return True
+
+def get_bin_centers(miller_array: Any) -> Any:
+    """
+    Get the centers of resolution bins.
+    
+    Args:
+        miller_array: Miller array with binning information
+    
+    Returns:
+        Any: Array of bin centers
+    """
+    from cctbx.array_family import flex
+    centers = flex.double()
+    for i_bin in miller_array.binner().range_all():
+      sel = miller_array.binner().selection(i_bin)
+      bin = miller_array.select(sel)
+      bin_center = (bin.d_max_min()[0]+bin.d_max_min()[1])/2
+      centers.append(bin_center)
+    return centers
+
+def interpolate(pt_1: float, pt_2: float, delta: float) -> float:
+    """
+    Linear interpolation between two points.
+    
+    Args:
+        pt_1: First point value
+        pt_2: Second point value
+        delta: Interpolation factor (0-1)
+    
+    Returns:
+        float: Interpolated value
+    """
+    return ( ((1.0-delta)*pt_1) + (delta*pt_2) )
+
+def calculate_mean_intensities(miller_array: Any, log: Optional[Any] = None) -> Dict[Any, float]:
+    """
+    Calculate mean intensities for each reflection based on resolution bins.
+    
+    Args:
+        miller_array: Miller array with intensity data
+        log: Log file for output. Defaults to None (stdout).
+    
+    Returns:
+        Dict[Any, float]: Dictionary mapping indices to mean intensities
+    """
+    if log == None:
+      log = sys.stdout
+    print("** Calculating bin mean intensity values for each intensity **", file=log)
+    bin_mean_intensities = miller_array.mean(use_binning=True).data
+    bin_centers = get_bin_centers(miller_array=miller_array)
+    d_mean_intensities = dict()
     for i_bin in miller_array.binner().range_all():
       sel = miller_array.binner().selection(i_bin)
       bin = miller_array.select(sel)
       if bin.size() > 0:
-        if bin.size() < min_bin_size:
-          max_bins = max_bins - 1
-          if max_bins == 0:
-            raise ValueError("Too few reflections for accurate binning.")
-          print("bin too small, trying %d bins" % max_bins, file=log)
-          bin_success = False
-          break
-          #f_w_binning(miller_array, max_bins=new_max_bins, log=log)
-  return True
-
-def get_bin_centers(miller_array):
-  from cctbx.array_family import flex
-  centers = flex.double()
-  for i_bin in miller_array.binner().range_all():
-    sel = miller_array.binner().selection(i_bin)
-    bin = miller_array.select(sel)
-    bin_center = (bin.d_max_min()[0]+bin.d_max_min()[1])/2
-    centers.append(bin_center)
-  return centers
-
-def interpolate(pt_1, pt_2, delta):
-  return ( ((1.0-delta)*pt_1) + (delta*pt_2) )
-
-def calculate_mean_intensities(miller_array, log=None):
-  if log == None:
-    log = sys.stdout
-  print("** Calculating bin mean intensity values for each intensity **", file=log)
-  bin_mean_intensities = miller_array.mean(use_binning=True).data
-  bin_centers = get_bin_centers(miller_array=miller_array)
-  d_mean_intensities = dict()
-  for i_bin in miller_array.binner().range_all():
-    sel = miller_array.binner().selection(i_bin)
-    bin = miller_array.select(sel)
-    if bin.size() > 0:
-      bin_center = bin_centers[i_bin]
-      for index, d in bin.d_spacings():
-        # d is between bin_center[i-1] and bin_center[i]
-        if d > bin_center:
-          d_1 = bin_centers[i_bin-1]
-          d_2 = bin_centers[i_bin]
-          m_1 = bin_mean_intensities[i_bin-1]
-          m_2 = bin_mean_intensities[i_bin]
-          # there is no bin[i-1]
-          if m_1 == None:
-            mean_i = bin_mean_intensities[i_bin]
-            #TO-DO deal with tail
-            #d_1 = d_2
-            #d_2 = bin_centers[i_bin+1]
-            #m_1 = m_2
-            #m_2 = bin_mean_intensities[i_bin+1]
-            #slope = (m_2-m_1) / (d_2-d_1)
-            #width = bin.d_max_min()[0] - bin.d_max_min()[1]
-            #d_2 = d_1
-            #d_1 = d_1 - width
-            #m_2 = m_1
-            #m_1 = -1 * (slope*(d_2-d_1)-m_2)
-            #delta = d - d_1
-            #mean_i = interpolate(pt_1=m_1,
-            #                     pt_2=m_2,
-            #                     delta=delta)
-            #d_mean_intensities[index] = mean_i
+        bin_center = bin_centers[i_bin]
+        for index, d in bin.d_spacings():
+          # d is between bin_center[i-1] and bin_center[i]
+          if d > bin_center:
+            d_1 = bin_centers[i_bin-1]
+            d_2 = bin_centers[i_bin]
+            m_1 = bin_mean_intensities[i_bin-1]
+            m_2 = bin_mean_intensities[i_bin]
+            # there is no bin[i-1]
+            if m_1 == None:
+              mean_i = bin_mean_intensities[i_bin]
+              #TO-DO deal with tail
+              #d_1 = d_2
+              #d_2 = bin_centers[i_bin+1]
+              #m_1 = m_2
+              #m_2 = bin_mean_intensities[i_bin+1]
+              #slope = (m_2-m_1) / (d_2-d_1)
+              #width = bin.d_max_min()[0] - bin.d_max_min()[1]
+              #d_2 = d_1
+              #d_1 = d_1 - width
+              #m_2 = m_1
+              #m_1 = -1 * (slope*(d_2-d_1)-m_2)
+              #delta = d - d_1
+              #mean_i = interpolate(pt_1=m_1,
+              #                     pt_2=m_2,
+              #                     delta=delta)
+              #d_mean_intensities[index] = mean_i
+            else:
+              delta = (d_1 - d) / (d_1 - d_2)
+              mean_i = interpolate(pt_1=m_1,
+                                   pt_2=m_2,
+                                   delta=delta)
+              assert (d_1 > d > d_2)
+              if ( not ( (m_1 > mean_i > m_2) or (m_2 > mean_i > m_1) ) and
+                   not (m_1 == mean_i == m_2 == 0.0) and
+                       (math.fabs(m_1-m_2) > 1.0e-10) ):
+                raise RuntimeError(
+                  "Internal error: i_bin=%d d=%f m_1=%f mean_i=%f m_2=%f" %
+                    (i_bin, d, m_1, mean_i, m_2))
+            d_mean_intensities[index] = mean_i
+          # d is between bin_center[i] and bin_center[i+1]
+          elif d < bin_center:
+            d_1 = bin_centers[i_bin]
+            d_2 = bin_centers[i_bin+1]
+            m_1 = bin_mean_intensities[i_bin]
+            m_2 = bin_mean_intensities[i_bin+1]
+            # there is no bin[i+1]
+            if m_2 == None:
+              mean_i = bin_mean_intensities[i_bin]
+              #TO-DO deal with tail
+              #d_2 = d_1
+              #d_1 = bin_centers[i_bin-1]
+              #m_2 = m_1
+              #m_1 = bin_mean_intensities[i_bin-1]
+              #slope = (m_2-m_1) / (d_2-d_1)
+              #width = bin.d_max_min()[0] - bin.d_max_min()[1]
+              #d_1 = d_2
+              #d_2 = d_1 + width
+              #m_1 = m_2
+              #m_2 = slope*(d_2-d_1)+m_1
+              #delta = d - d_1
+              #mean_i = interpolate(pt_1=m_1,
+              #                     pt_2=m_2,
+              #                     delta=delta)
+              #d_mean_intensities[index] = mean_i
+            else:
+              delta = (d_1 - d) / (d_1 - d_2)
+              mean_i = interpolate(pt_1=m_1,
+                                   pt_2=m_2,
+                                   delta=delta)
+              assert (d_1 > d > d_2)
+              if ( not ( (m_1 > mean_i > m_2) or (m_2 > mean_i > m_1) ) and
+                   not (m_1 == mean_i == m_2 == 0.0) and
+                       (math.fabs(m_1-m_2) > 1.0e-10) ):
+                raise RuntimeError(
+                  "Internal error: i_bin=%d d=%f m_1=%f mean_i=%f m_2=%f" %
+                    (i_bin, d, m_1, mean_i, m_2))
+            d_mean_intensities[index] = mean_i
+          # d = the current bin center
           else:
-            delta = (d_1 - d) / (d_1 - d_2)
-            mean_i = interpolate(pt_1=m_1,
-                                 pt_2=m_2,
-                                 delta=delta)
-            assert (d_1 > d > d_2)
-            if ( not ( (m_1 > mean_i > m_2) or (m_2 > mean_i > m_1) ) and
-                 not (m_1 == mean_i == m_2 == 0.0) and
-                     (math.fabs(m_1-m_2) > 1.0e-10) ):
-              raise RuntimeError(
-                "Internal error: i_bin=%d d=%f m_1=%f mean_i=%f m_2=%f" %
-                  (i_bin, d, m_1, mean_i, m_2))
-          d_mean_intensities[index] = mean_i
-        # d is between bin_center[i] and bin_center[i+1]
-        elif d < bin_center:
-          d_1 = bin_centers[i_bin]
-          d_2 = bin_centers[i_bin+1]
-          m_1 = bin_mean_intensities[i_bin]
-          m_2 = bin_mean_intensities[i_bin+1]
-          # there is no bin[i+1]
-          if m_2 == None:
             mean_i = bin_mean_intensities[i_bin]
-            #TO-DO deal with tail
-            #d_2 = d_1
-            #d_1 = bin_centers[i_bin-1]
-            #m_2 = m_1
-            #m_1 = bin_mean_intensities[i_bin-1]
-            #slope = (m_2-m_1) / (d_2-d_1)
-            #width = bin.d_max_min()[0] - bin.d_max_min()[1]
-            #d_1 = d_2
-            #d_2 = d_1 + width
-            #m_1 = m_2
-            #m_2 = slope*(d_2-d_1)+m_1
-            #delta = d - d_1
-            #mean_i = interpolate(pt_1=m_1,
-            #                     pt_2=m_2,
-            #                     delta=delta)
-            #d_mean_intensities[index] = mean_i
-          else:
-            delta = (d_1 - d) / (d_1 - d_2)
-            mean_i = interpolate(pt_1=m_1,
-                                 pt_2=m_2,
-                                 delta=delta)
-            assert (d_1 > d > d_2)
-            if ( not ( (m_1 > mean_i > m_2) or (m_2 > mean_i > m_1) ) and
-                 not (m_1 == mean_i == m_2 == 0.0) and
-                     (math.fabs(m_1-m_2) > 1.0e-10) ):
-              raise RuntimeError(
-                "Internal error: i_bin=%d d=%f m_1=%f mean_i=%f m_2=%f" %
-                  (i_bin, d, m_1, mean_i, m_2))
-          d_mean_intensities[index] = mean_i
-        # d = the current bin center
-        else:
-          mean_i = bin_mean_intensities[i_bin]
-          d_mean_intensities[index] = mean_i
-  return d_mean_intensities
+            d_mean_intensities[index] = mean_i
+    return d_mean_intensities
 
 def french_wilson_scale(
-      miller_array,
-      params=None,
-      sigma_iobs_rejection_criterion=None,
-      merge=False,
-      min_bin_size=40,
-      max_bins=60,
-      log=None):
-  from cctbx.array_family import flex
-  if not miller_array.is_xray_intensity_array():
-    raise Sorry("Input array appears to be amplitudes. "+
-      "This method is only appropriate for input intensities.")
-  if miller_array.unit_cell() is None:
-    raise Sorry("No unit cell information found. Please supply unit cell data.")
-  if miller_array.crystal_symmetry() is None:
-    raise Sorry("No crystal symmetry information found. Please supply "+
-                "crystal symmetry data.")
-  if miller_array.sigmas() is None:
-    raise Sorry("Input array does not contain sigma values. "+
-      "This method requires input intensities with associated sigmas.")
-  if (not miller_array.is_unique_set_under_symmetry()):
-    if (merge):
-      miller_array = miller_array.merge_equivalents().array()
-    else :
-      raise Sorry("Unmerged data not allowed - please merge "+
-        "symmetry-equivalent reflections first.")
-  if (miller_array.data().all_eq(miller_array.data()[0])):
-    # XXX some Scalepack files (and possibly others) crash the routine if this
-    # check is not performed.  presumably an HKL2000 bug?
-    raise Sorry(("The input intensities have uniform values (%g); this is probably "+
-      "a bug in one of the data processing and/or conversion programs.") %
-      miller_array.data()[0])
-  # Phil defaults are set in master_phil above - they should be kept in sync with the
-  # default arguments for this function
-  if params and params.max_bins:
-    max_bins = params.max_bins
-  if params and params.min_bin_size:
-    min_bin_size = params.min_bin_size
-  if log == None:
-    log = sys.stdout
-  if (sigma_iobs_rejection_criterion is None):
-    sigma_iobs_rejection_criterion = -4.0
-  elif (sigma_iobs_rejection_criterion == 0.0):
-    libtbx.warn(
-      "For French and Wilson scaling, sigma_iobs_rejection_criterion " +
-      "must be a value between -4.0 and -1.0, or None. " +
-      "Setting sigma_iobs_rejection_criteriont to -4.0.")
-    sigma_iobs_rejection_criterion = -4.0
-  elif ((sigma_iobs_rejection_criterion < -4.0) or
-        (sigma_iobs_rejection_criterion > -1.0)):
-    raise Sorry(
-      "For French and Wilson scaling, sigma_iobs_rejection_criterion " +
-      "must be a value between -4.0 and -1.0, or None.")
-  rejected = []
-  make_sub_header("Scaling input intensities via French-Wilson Method",
-    out=log)
-  print("Trying %d bins..." % max_bins, file=log)
-  try:
-    f_w_binning(
-      miller_array=miller_array,
-      max_bins=max_bins,
-      min_bin_size=min_bin_size,
-      log=log
-    )
-  except ValueError:
+      miller_array: Any,
+      params: Optional[Any] = None,
+      sigma_iobs_rejection_criterion: Optional[float] = None,
+      merge: bool = False,
+      min_bin_size: int = 40,
+      max_bins: int = 60,
+      log: Optional[Any] = None) -> Optional[Any]:
+    """
+    Perform French-Wilson scaling on intensity data.
+    
+    Args:
+        miller_array: Miller array containing intensity data
+        params: Parameter object with scaling parameters. Defaults to None.
+        sigma_iobs_rejection_criterion: Rejection criterion for I/sigma(I). Defaults to None.
+        merge: Whether to merge equivalent reflections. Defaults to False.
+        min_bin_size: Minimum reflections per bin. Defaults to 40.
+        max_bins: Maximum number of resolution bins. Defaults to 60.
+        log: Log file for output. Defaults to None (stdout).
+    
+    Returns:
+        Optional[Any]: Scaled miller array or None if scaling failed
+    
+    Raises:
+        Sorry: If input data is invalid or missing required information
+    """
+    from cctbx.array_family import flex
+    if not miller_array.is_xray_intensity_array():
+      raise Sorry("Input array appears to be amplitudes. "+
+        "This method is only appropriate for input intensities.")
+    if miller_array.unit_cell() is None:
+      raise Sorry("No unit cell information found. Please supply unit cell data.")
+    if miller_array.crystal_symmetry() is None:
+      raise Sorry("No crystal symmetry information found. Please supply "+
+                  "crystal symmetry data.")
+    if miller_array.sigmas() is None:
+      raise Sorry("Input array does not contain sigma values. "+
+        "This method requires input intensities with associated sigmas.")
+    if (not miller_array.is_unique_set_under_symmetry()):
+      if (merge):
+        miller_array = miller_array.merge_equivalents().array()
+      else :
+        raise Sorry("Unmerged data not allowed - please merge "+
+          "symmetry-equivalent reflections first.")
+    if (miller_array.data().all_eq(miller_array.data()[0])):
+      # XXX some Scalepack files (and possibly others) crash the routine if this
+      # check is not performed.  presumably an HKL2000 bug?
+      raise Sorry(("The input intensities have uniform values (%g); this is probably "+
+        "a bug in one of the data processing and/or conversion programs.") %
+        miller_array.data()[0])
+    # Phil defaults are set in master_phil above - they should be kept in sync with the
+    # default arguments for this function
+    if params and params.max_bins:
+      max_bins = params.max_bins
+    if params and params.min_bin_size:
+      min_bin_size = params.min_bin_size
+    if log == None:
+      log = sys.stdout
+    if (sigma_iobs_rejection_criterion is None):
+      sigma_iobs_rejection_criterion = -4.0
+    elif (sigma_iobs_rejection_criterion == 0.0):
+      libtbx.warn(
+        "For French and Wilson scaling, sigma_iobs_rejection_criterion " +
+        "must be a value between -4.0 and -1.0, or None. " +
+        "Setting sigma_iobs_rejection_criteriont to -4.0.")
+      sigma_iobs_rejection_criterion = -4.0
+    elif ((sigma_iobs_rejection_criterion < -4.0) or
+          (sigma_iobs_rejection_criterion > -1.0)):
+      raise Sorry(
+        "For French and Wilson scaling, sigma_iobs_rejection_criterion " +
+        "must be a value between -4.0 and -1.0, or None.")
+    rejected = []
+    make_sub_header("Scaling input intensities via French-Wilson Method",
+      out=log)
+    print("Trying %d bins..." % max_bins, file=log)
     try:
-      miller_array.setup_binner_counting_sorted(reflections_per_bin=5)
-    except AssertionError:
-      print(
-        "Too few reflections for accurate binning.\n"
-        "** Skipping French-Wilson scaling **",
-        file=log
+      f_w_binning(
+        miller_array=miller_array,
+        max_bins=max_bins,
+        min_bin_size=min_bin_size,
+        log=log
       )
-      return None
-  print("Number of bins = %d" % miller_array.binner().n_bins_used(), file=log)
-  new_I = flex.double()
-  new_sigma_I = flex.double()
-  new_F = flex.double()
-  new_sigma_F = flex.double()
-  new_indices = flex.miller_index()
-  bin_mean_intensities = miller_array.mean(use_binning=True).data
-  d_mean_intensities = \
-    calculate_mean_intensities(miller_array=miller_array, log=log)
-  assert len(d_mean_intensities) == miller_array.data().size()
-  for i_bin in miller_array.binner().range_all():
-    sel = miller_array.binner().selection(i_bin)
-    bin = miller_array.select(sel)
-    if bin.size() > 0:
-      #bin_mean_intensity = bin_mean_intensities[i_bin]
-      cen = bin.select_centric()
-      acen = bin.select_acentric()
-      for I, sigma_I, index in zip(cen.data(),
-                                   cen.sigmas(),
-                                   cen.indices()):
-        mean_intensity = d_mean_intensities[index]
-        if (mean_intensity == 0):
-          # XXX is this the appropriate way to handle this?
-          rejected.append( (index, I, sigma_I, mean_intensity) )
-        elif (sigma_I <= 0):
-          if I <= 0 or sigma_I < 0 :
+    except ValueError:
+      try:
+        miller_array.setup_binner_counting_sorted(reflections_per_bin=5)
+      except AssertionError:
+        print(
+          "Too few reflections for accurate binning.\n"
+          "** Skipping French-Wilson scaling **",
+          file=log
+        )
+        return None
+    print("Number of bins = %d" % miller_array.binner().n_bins_used(), file=log)
+    new_I = flex.double()
+    new_sigma_I = flex.double()
+    new_F = flex.double()
+    new_sigma_F = flex.double()
+    new_indices = flex.miller_index()
+    bin_mean_intensities = miller_array.mean(use_binning=True).data
+    d_mean_intensities = \
+      calculate_mean_intensities(miller_array=miller_array, log=log)
+    assert len(d_mean_intensities) == miller_array.data().size()
+    for i_bin in miller_array.binner().range_all():
+      sel = miller_array.binner().selection(i_bin)
+      bin = miller_array.select(sel)
+      if bin.size() > 0:
+        #bin_mean_intensity = bin_mean_intensities[i_bin]
+        cen = bin.select_centric()
+        acen = bin.select_acentric()
+        for I, sigma_I, index in zip(cen.data(),
+                                     cen.sigmas(),
+                                     cen.indices()):
+          mean_intensity = d_mean_intensities[index]
+          if (mean_intensity == 0):
+            # XXX is this the appropriate way to handle this?
             rejected.append( (index, I, sigma_I, mean_intensity) )
-            continue
+          elif (sigma_I <= 0):
+            if I <= 0 or sigma_I < 0 :
+              rejected.append( (index, I, sigma_I, mean_intensity) )
+              continue
+            else:
+              J = I
+              sigma_J = sigma_I
+              F = math.sqrt(I)
+              sigma_F = sigma_I
+          else :
+            J, sigma_J, F, sigma_F = fw_centric(
+                                       I=I,
+                                       sigma_I=sigma_I,
+                                       mean_intensity=mean_intensity,
+                                       sigma_iobs_rejection_criterion=\
+                                       sigma_iobs_rejection_criterion)
+          if J >= 0:
+            assert sigma_J >= 0 and F >= 0 and sigma_F >= 0
+            new_I.append(J)
+            new_indices.append(index)
+            new_sigma_I.append(sigma_J)
+            new_F.append(F)
+            new_sigma_F.append(sigma_F)
           else:
-            J = I
-            sigma_J = sigma_I
-            F = math.sqrt(I)
-            sigma_F = sigma_I
-        else :
-          J, sigma_J, F, sigma_F = fw_centric(
-                                     I=I,
-                                     sigma_I=sigma_I,
-                                     mean_intensity=mean_intensity,
-                                     sigma_iobs_rejection_criterion=\
-                                     sigma_iobs_rejection_criterion)
-        if J >= 0:
-          assert sigma_J >= 0 and F >= 0 and sigma_F >= 0
-          new_I.append(J)
-          new_indices.append(index)
-          new_sigma_I.append(sigma_J)
-          new_F.append(F)
-          new_sigma_F.append(sigma_F)
-        else:
-          rejected.append( (index, I, sigma_I, mean_intensity) )
-      for I, sigma_I, index in zip(acen.data(),
-                                   acen.sigmas(),
-                                   acen.indices()):
-        mean_intensity = d_mean_intensities[index]
-        if (mean_intensity == 0):
-          rejected.append( (index, I, sigma_I, mean_intensity) )
-        elif (sigma_I <= 0):
-          if I <= 0 or sigma_I < 0 :
             rejected.append( (index, I, sigma_I, mean_intensity) )
-            continue
+        for I, sigma_I, index in zip(acen.data(),
+                                     acen.sigmas(),
+                                     acen.indices()):
+          mean_intensity = d_mean_intensities[index]
+          if (mean_intensity == 0):
+            rejected.append( (index, I, sigma_I, mean_intensity) )
+          elif (sigma_I <= 0):
+            if I <= 0 or sigma_I < 0 :
+              rejected.append( (index, I, sigma_I, mean_intensity) )
+              continue
+            else:
+              J = I
+              sigma_J = sigma_I
+              F = math.sqrt(I)
+              sigma_F = sigma_I
+          else :
+            J, sigma_J, F, sigma_F = fw_acentric(
+                                       I=I,
+                                       sigma_I=sigma_I,
+                                       mean_intensity=mean_intensity,
+                                       sigma_iobs_rejection_criterion=\
+                                       sigma_iobs_rejection_criterion)
+          if J >= 0:
+            assert sigma_J >= 0 and F >= 0 and sigma_F >= 0
+            new_I.append(J)
+            new_indices.append(index)
+            new_sigma_I.append(sigma_J)
+            new_F.append(F)
+            new_sigma_F.append(sigma_F)
           else:
-            J = I
-            sigma_J = sigma_I
-            F = math.sqrt(I)
-            sigma_F = sigma_I
-        else :
-          J, sigma_J, F, sigma_F = fw_acentric(
-                                     I=I,
-                                     sigma_I=sigma_I,
-                                     mean_intensity=mean_intensity,
-                                     sigma_iobs_rejection_criterion=\
-                                     sigma_iobs_rejection_criterion)
-        if J >= 0:
-          assert sigma_J >= 0 and F >= 0 and sigma_F >= 0
-          new_I.append(J)
-          new_indices.append(index)
-          new_sigma_I.append(sigma_J)
-          new_F.append(F)
-          new_sigma_F.append(sigma_F)
-        else:
-          rejected.append( (index, I, sigma_I, mean_intensity) )
-  f_obs = miller_array.customized_copy(indices=new_indices,
-                                       data=new_F,
-                                       sigmas=new_sigma_F)
-  f_obs.set_observation_type_xray_amplitude()
-  show_rejected_summary(rejected=rejected, log=log)
-  return f_obs
+            rejected.append( (index, I, sigma_I, mean_intensity) )
+    f_obs = miller_array.customized_copy(indices=new_indices,
+                                         data=new_F,
+                                         sigmas=new_sigma_F)
+    f_obs.set_observation_type_xray_amplitude()
+    show_rejected_summary(rejected=rejected, log=log)
+    return f_obs
 
-def show_rejected_summary(rejected, log=None):
-  if log == None:
-    log = sys.stdout
-  print("** Total # rejected intensities: %d **" % len(rejected), file=log)
-  if len(rejected) > 0:
-    print("** Summary or rejected intensities **", file=log)
-    print("-----------------------------------------------------------------", file=log)
-    print("Miller Index  :  Intensity  :  Sigma  :  Bin Mean Intensity", file=log)
-    for rej in rejected:
-      print("%s    %.3f      %.3f    %.3f" % \
-                    (str(rej[0]),rej[1],rej[2],rej[3]), file=log)
-    print("-----------------------------------------------------------------", file=log)
+def show_rejected_summary(rejected: List[Tuple[Any, float, float, float]], log: Optional[Any] = None) -> None:
+    """
+    Display summary of rejected intensities.
+    
+    Args:
+        rejected: List of rejected intensity tuples (index, I, sigma_I, mean_intensity)
+        log: Log file for output. Defaults to None (stdout).
+    """
+    if log == None:
+      log = sys.stdout
+    print("** Total # rejected intensities: %d **" % len(rejected), file=log)
+    if len(rejected) > 0:
+      print("** Summary or rejected intensities **", file=log)
+      print("-----------------------------------------------------------------", file=log)
+      print("Miller Index  :  Intensity  :  Sigma  :  Bin Mean Intensity", file=log)
+      for rej in rejected:
+        print("%s    %.3f      %.3f    %.3f" % \
+                      (str(rej[0]),rej[1],rej[2],rej[3]), file=log)
+      print("-----------------------------------------------------------------", file=log)
